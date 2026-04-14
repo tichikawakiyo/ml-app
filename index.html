@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>機械学習分析アプリ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--card:#fff;--card2:#f0efe9;
+  --text:#1c1b18;--text2:#6b6860;--text3:#a09e98;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-b:#93c5fd;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-b:#86efac;
+  --red:#dc2626;--red-bg:#fef2f2;--red-b:#fca5a5;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-b:#fcd34d;
+  --purple:#7c3aed;--purple-bg:#f5f3ff;--purple-b:#c4b5fd;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
+  --radius:8px;--radius-lg:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#111110;--card:#1a1a18;--card2:#222220;
+  --text:#f0efe9;--text2:#9a9890;--text3:#6a6860;
+  --blue:#60a5fa;--blue-bg:#1a3050;--blue-b:#1d4ed8;
+  --green:#4ade80;--green-bg:#0f3d20;--green-b:#166534;
+  --red:#f87171;--red-bg:#3d0f0f;--red-b:#991b1b;
+  --amber:#fbbf24;--amber-bg:#3d1f04;--amber-b:#92400e;
+  --purple:#a78bfa;--purple-bg:#2a1060;--purple-b:#5b21b6;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+}}
+body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem 1rem;font-size:15px;line-height:1.6}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:21px;font-weight:700;margin-bottom:.2rem}
+.subtitle{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+.card{background:var(--card);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:.85rem;text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:8px}
+.snum{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
+.sw{background:var(--card2);color:var(--text3)}.sa{background:var(--blue-bg);color:var(--blue)}.sd{background:var(--green-bg);color:var(--green)}.sp{background:var(--purple-bg);color:var(--purple)}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem}
+.tab{padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit}
+.tab.active{color:var(--text);border-bottom:2px solid var(--blue)}
+.pane{display:none}.pane.active{display:block}
+label{font-size:13px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500}
+select,input[type=number]{width:100%;padding:8px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--card);color:var(--text);font-size:14px;font-family:inherit}
+select:focus,input:focus{outline:none;border-color:var(--blue)}
+.row{display:flex;gap:1rem;flex-wrap:wrap}
+.col{flex:1;min-width:150px}.col2{flex:2;min-width:200px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.metric{background:var(--card2);border-radius:var(--radius);padding:.75rem 1rem}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.metric-value{font-size:21px;font-weight:700}
+.metric-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.btn{padding:9px 20px;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{opacity:.88}.btn-primary:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.88}
+.btn-purple{background:var(--purple);color:#fff}.btn-purple:hover{opacity:.88}
+.btn-sm{padding:4px 11px;font-size:12px;border-radius:var(--radius);cursor:pointer;border:.5px solid var(--border2);background:none;color:var(--text2);font-family:inherit}
+.btn-sm:hover{background:var(--card2)}
+.btn-copy{padding:6px 14px;font-size:12px;border-radius:var(--radius);cursor:pointer;border:.5px solid var(--blue-b);background:var(--blue-bg);color:var(--blue);font-family:inherit;font-weight:600}
+.btn-copy:hover{opacity:.85}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;cursor:pointer;transition:border-color .15s}
+.upload-zone:hover,.upload-zone.over{border-color:var(--blue)}.upload-zone.over{background:var(--blue-bg)}
+.upload-icon{font-size:28px;margin-bottom:.4rem;color:var(--text2)}
+.upload-text{font-size:14px;font-weight:600;margin-bottom:.2rem}
+.upload-sub{font-size:12px;color:var(--text2)}
+.checkboxes{display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow-y:auto;padding:4px 0}
+.cb-item{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius);border:.5px solid var(--border);cursor:pointer;font-size:13px;background:var(--card);user-select:none;transition:all .12s}
+.cb-item:hover{border-color:var(--blue)}.cb-item.checked{background:var(--blue-bg);border-color:var(--blue-b);color:var(--blue)}
+.cb-item.num{border-left:3px solid var(--green)}.cb-item.cat{border-left:3px solid var(--amber)}.cb-item.date-derived{border-left:3px solid var(--purple)}
+.tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.tag-num{background:var(--green-bg);color:var(--green)}.tag-cat{background:var(--amber-bg);color:var(--amber)}.tag-date{background:var(--purple-bg);color:var(--purple)}
+.wb{border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;margin-bottom:.75rem;line-height:1.7}
+.wb.ok{background:var(--green-bg);border:.5px solid var(--green-b);color:var(--green)}
+.wb.warn{background:var(--amber-bg);border:.5px solid var(--amber-b);color:var(--amber)}
+.wb.ng{background:var(--red-bg);border:.5px solid var(--red-b);color:var(--red)}
+.wb.info{background:var(--blue-bg);border:.5px solid var(--blue-b);color:var(--blue)}
+.wb.purple{background:var(--purple-bg);border:.5px solid var(--purple-b);color:var(--purple)}
+.error-list{margin-top:.5rem;font-size:12px;max-height:140px;overflow-y:auto}
+.error-item{padding:3px 8px;border-radius:4px;background:rgba(0,0,0,.04);margin-bottom:3px;font-family:monospace;font-size:11px}
+.progress-wrap{background:var(--card2);border-radius:4px;height:7px;overflow:hidden;margin:.5rem 0}
+.progress-bar{height:100%;background:var(--blue);border-radius:4px;transition:width .3s}
+canvas.chart{width:100%!important}
+table.result{width:100%;border-collapse:collapse;font-size:13px}
+table.result th{text-align:left;padding:7px 10px;border-bottom:.5px solid var(--border);color:var(--text2);font-weight:600;font-size:12px}
+table.result td{padding:7px 10px;border-bottom:.5px solid var(--border)}
+.feat-bar-wrap{background:var(--card2);border-radius:3px;height:11px;overflow:hidden;width:100%}
+.feat-bar{height:100%;background:var(--blue);border-radius:3px}
+.sdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.dok{background:var(--green)}.dwarn{background:var(--amber)}.dng{background:var(--red)}
+.hidden{display:none}
+hr.sep{border:none;border-top:.5px solid var(--border);margin:1rem 0}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row input[type=range]{flex:1}
+.range-val{font-size:14px;font-weight:600;min-width:36px;text-align:right}
+.file-info-bar{font-size:13px;padding:.6rem .9rem;background:var(--card2);border-radius:var(--radius);display:flex;align-items:center;gap:8px;margin-top:.6rem;flex-wrap:wrap}
+.dl-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:.5px solid var(--green-b);background:var(--green-bg);color:var(--green);font-family:inherit;margin-top:.75rem}
+.pred-table-wrap{max-height:360px;overflow-y:auto;margin-top:.75rem}
+/* ===== SCORE DISPLAY ===== */
+.score-panel{background:var(--card2);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.score-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
+.score-title{font-size:14px;font-weight:700}
+.score-main{display:flex;align-items:center;gap:16px;margin-bottom:.75rem}
+.score-num{font-size:48px;font-weight:700;line-height:1}
+.score-denom{font-size:20px;color:var(--text2);font-weight:400}
+.score-grade{font-size:28px;font-weight:700}
+.score-gauge{height:12px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:.5rem}
+.score-gauge-fill{height:100%;border-radius:6px;transition:width .6s ease}
+.score-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.score-item{background:var(--card);border-radius:var(--radius);padding:.6rem .9rem;border:.5px solid var(--border)}
+.score-item-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.score-item-val{font-size:15px;font-weight:700}
+.score-item-comment{font-size:11px;color:var(--text2);margin-top:2px}
+.copy-summary-wrap{margin-top:.75rem;padding:.75rem 1rem;background:var(--card);border:.5px solid var(--border);border-radius:var(--radius);position:relative}
+.copy-summary-text{font-family:monospace;font-size:12px;white-space:pre-wrap;line-height:1.7;color:var(--text);max-height:200px;overflow-y:auto}
+.copy-btn-wrap{display:flex;justify-content:flex-end;margin-top:.5rem;gap:8px}
+.copied-msg{font-size:12px;color:var(--green);font-weight:600;display:none}
+/* date option toggle */
+.toggle-row{display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius);background:var(--card2);margin-bottom:6px}
+.toggle-label{font-size:13px;flex:1}
+.toggle-switch{position:relative;width:38px;height:20px;cursor:pointer;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;border-radius:10px;background:var(--border2);transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s}
+.toggle-switch input:checked+.toggle-slider{background:var(--blue)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>機械学習分析アプリ</h1>
+  <p class="subtitle">Excel / CSV を読み込んでモデルを構築し、結果をわかりやすく確認・共有できます</p>
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="card-title"><span class="snum sa">1</span>学習データの読み込み</div>
+    <div class="upload-zone" id="dz1" onclick="document.getElementById('fi1').click()">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">Excel (.xlsx/.xls) または CSV をドロップ / クリック</div>
+      <div class="upload-sub">目的変数（予測したい列）を含むファイル</div>
+    </div>
+    <input type="file" id="fi1" accept=".xlsx,.xls,.csv" style="display:none">
+    <div id="info1" class="hidden">
+      <div class="file-info-bar" id="fbar1"></div>
+      <div id="sheetWrap1" class="hidden" style="margin-top:.75rem">
+        <label>シートを選択</label>
+        <select id="sheetSel1"></select>
+      </div>
+      <div id="errBox1" class="hidden" style="margin-top:.5rem"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card hidden" id="card2">
+    <div class="card-title"><span class="snum sw" id="b2">2</span>モデル設定・学習</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchMode('clf',this)">分類</button>
+      <button class="tab" onclick="switchMode('reg',this)">回帰</button>
+    </div>
+
+    <!-- 日付カラム選択 -->
+    <div style="margin-bottom:1rem">
+      <label>日付カラム（任意）</label>
+      <select id="dateSel"><option value="">使用しない</option></select>
+      <div id="dateOptions" class="hidden" style="margin-top:.6rem;padding:.75rem;background:var(--card2);border-radius:var(--radius)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">日付から生成する特徴量</div>
+        <label class="toggle-row"><span class="toggle-label">曜日（月〜日 → 0〜6）</span><label class="toggle-switch"><input type="checkbox" id="tog_dow" checked><span class="toggle-slider"></span></label></label>
+        <label class="toggle-row"><span class="toggle-label">月（1〜12）</span><label class="toggle-switch"><input type="checkbox" id="tog_month" checked><span class="toggle-slider"></span></label></label>
+        <label class="toggle-row"><span class="toggle-label">四半期（1〜4）</span><label class="toggle-switch"><input type="checkbox" id="tog_quarter" checked><span class="toggle-slider"></span></label></label>
+        <div id="dateWarnBox" class="hidden" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:1rem">
+      <div class="col2">
+        <label>目的変数（予測したい列）</label>
+        <select id="targetCol"><option value="">-- 選択 --</option></select>
+      </div>
+      <div class="col">
+        <label>手法</label>
+        <select id="methodSel"></select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="margin:0">説明変数（使用する列）</label>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="checkAll(true)">全選択</button>
+          <button class="btn-sm" onclick="checkAll(false)">全解除</button>
+        </div>
+      </div>
+      <div id="featureCbs" class="checkboxes"></div>
+      <div style="margin-top:5px;font-size:11px;color:var(--text2)">
+        <span style="color:var(--green);font-weight:700">▎</span>数値 &nbsp;
+        <span style="color:var(--amber);font-weight:700">▎</span>カテゴリ（自動One-Hot変換） &nbsp;
+        <span style="color:var(--purple);font-weight:700">▎</span>日付由来
+      </div>
+    </div>
+
+    <div id="linearDateNote" class="wb info hidden" style="margin-bottom:.75rem">
+      ℹ️ 重回帰が選択されているため、日付由来の列は自動的に除外されます。
+    </div>
+
+    <hr class="sep">
+    <div class="row" style="margin-bottom:1rem">
+      <div class="col">
+        <label>訓練/テスト分割比率</label>
+        <div class="range-row">
+          <input type="range" id="splitRatio" min="50" max="90" value="80" step="5" oninput="document.getElementById('splitVal').textContent=this.value+'%'">
+          <span class="range-val" id="splitVal">80%</span>
+        </div>
+      </div>
+      <div class="col">
+        <label>交差検証（k-fold CV）</label>
+        <select id="kfoldSel">
+          <option value="0">なし</option>
+          <option value="5" selected>5-fold CV</option>
+          <option value="10">10-fold CV</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runAnalysis()">モデルを学習する</button>
+  </div>
+
+  <!-- STEP 3 結果 -->
+  <div id="stepResult" class="hidden">
+    <div class="card" id="resultLoading">
+      <div style="text-align:center;padding:1.5rem;color:var(--text2);font-size:14px">⏳ 学習中...</div>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    </div>
+    <div id="resultContent" class="hidden">
+      <!-- わかりやすいスコア -->
+      <div class="card">
+        <div class="card-title"><span class="snum sd">3</span>モデル評価結果</div>
+        <div id="overfitBox" class="hidden" style="margin-bottom:.75rem"></div>
+
+        <!-- スコアパネル -->
+        <div class="score-panel" id="scorePanel"></div>
+
+        <!-- コピペサマリー -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <div style="font-size:13px;font-weight:600;color:var(--text2)">AIに評価してもらう用サマリー</div>
+            <button class="btn-copy" onclick="copySummary()">📋 コピー</button>
+          </div>
+          <div class="copy-summary-wrap">
+            <div class="copy-summary-text" id="summaryText"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:.4rem">↑ コピーしてClaude等のAIに貼り付けると詳しい解説が得られます</div>
+        </div>
+
+        <hr class="sep">
+        <div id="metricsGrid" style="margin-bottom:.75rem"></div>
+        <div id="cvResult" style="font-size:13px;color:var(--text2)"></div>
+      </div>
+
+      <div id="clfResults">
+        <div class="grid2">
+          <div class="card"><div class="card-title">混同行列</div><div id="cmDisplay"></div></div>
+          <div class="card"><div class="card-title">ROC曲線</div><div style="height:200px;position:relative"><canvas id="rocChart" class="chart"></canvas></div></div>
+        </div>
+      </div>
+      <div id="regResults">
+        <div class="card"><div class="card-title">予測値 vs 実測値</div><div style="height:260px;position:relative"><canvas id="scatterChart" class="chart"></canvas></div></div>
+      </div>
+      <div class="card" id="fiCard">
+        <div class="card-title">特徴量重要度（何が予測に効いているか）</div>
+        <div id="fiDisplay"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">学習曲線（過学習の診断）</div>
+        <div style="height:230px;position:relative"><canvas id="lcChart" class="chart"></canvas></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:.5rem">訓練とテストのスコアの差が大きいほど過学習の可能性があります。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 予測データ -->
+  <div class="card hidden" id="card4">
+    <div class="card-title"><span class="snum sp">4</span>新しいデータへの予測適用</div>
+    <div style="margin-bottom:.75rem;font-size:13px;color:var(--text2)">学習時の説明変数列を含むファイルを読み込んでください。目的変数列は不要です。</div>
+    <div id="modelSummary" class="wb info" style="margin-bottom:.75rem"></div>
+    <div class="upload-zone" id="dz2" onclick="document.getElementById('fi2').click()">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">予測対象データをドロップ / クリック</div>
+      <div class="upload-sub">Excel / CSV（学習時と同じカラム構成）</div>
+    </div>
+    <input type="file" id="fi2" accept=".xlsx,.xls,.csv" style="display:none">
+    <div id="info2" class="hidden">
+      <div class="file-info-bar" id="fbar2"></div>
+      <div id="sheetWrap2" class="hidden" style="margin-top:.75rem">
+        <label>シートを選択</label>
+        <select id="sheetSel2"></select>
+      </div>
+      <div id="errBox2" class="hidden" style="margin-top:.5rem"></div>
+    </div>
+    <div id="predControls" class="hidden" style="margin-top:.75rem">
+      <button class="btn btn-purple" onclick="runPrediction()">予測を実行する</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 予測結果 -->
+  <div class="card hidden" id="card5">
+    <div class="card-title"><span class="snum sp">5</span>予測結果</div>
+    <div id="predResultInfo" style="font-size:13px;color:var(--text2);margin-bottom:.5rem"></div>
+    <div class="pred-table-wrap"><table class="result" id="predTable"></table></div>
+    <button class="dl-btn" onclick="downloadCSV()">⬇ 予測結果をCSVでダウンロード</button>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let trainRawData=[],trainColNames=[],trainColTypes={},trainSheets={};
+let predRawData=[],predColNames=[],predSheets={};
+let mode='clf',charts={};
+let trainedModel=null,predResults=[];
+let lastMetrics=null; // for copy summary
+
+// ===== DROPZONE =====
+function setupDZ(dzId,inputId,slot){
+  const dz=document.getElementById(dzId);
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFile(e.dataTransfer.files[0],slot)});
+  document.getElementById(inputId).addEventListener('change',e=>handleFile(e.target.files[0],slot));
+}
+setupDZ('dz1','fi1',1);setupDZ('dz2','fi2',2);
+
+function handleFile(file,slot){
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      if(ext==='csv'){
+        const{data,errors}=parseCSV(e.target.result);
+        initSlot(slot,file.name,{'データ':data},['データ'],errors);
+      } else {
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const sheets={};
+        wb.SheetNames.forEach(n=>{sheets[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:''});});
+        initSlot(slot,file.name,sheets,wb.SheetNames,[]);
+      }
+    }catch(err){alert('読み込みエラー: '+err.message);}
+  };
+  if(ext==='csv')reader.readAsText(file,'UTF-8');else reader.readAsArrayBuffer(file);
+}
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const data=[],errors=[];
+  lines.slice(1).forEach((line,ri)=>{
+    if(!line.trim())return;
+    const vals=splitCSVLine(line);
+    const obj={};
+    headers.forEach((h,i)=>{
+      const raw=(vals[i]||'').trim().replace(/^"|"$/g,'');
+      obj[h]=(raw!==''&&!isNaN(raw))?parseFloat(raw):raw;
+    });
+    data.push(obj);
+  });
+  return{data,errors};
+}
+function splitCSVLine(line){
+  const result=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){result.push(cur);cur='';}else{cur+=c;}}
+  result.push(cur);return result;
+}
+
+function initSlot(slot,filename,sheets,sheetNames,errors){
+  if(slot===1)trainSheets=sheets;else predSheets=sheets;
+  const info=document.getElementById('info'+slot);
+  info.classList.remove('hidden');
+  const sw=document.getElementById('sheetWrap'+slot);
+  const ss=document.getElementById('sheetSel'+slot);
+  ss.innerHTML='';
+  sheetNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;ss.appendChild(o);});
+  sw.classList.toggle('hidden',sheetNames.length<=1);
+  ss.onchange=()=>loadSheet(slot);
+  loadSheet(slot);
+}
+
+function loadSheet(slot){
+  const sheets=slot===1?trainSheets:predSheets;
+  const name=document.getElementById('sheetSel'+slot).value||Object.keys(sheets)[0];
+  const raw=sheets[name]||[];
+  const{cleanData,errors}=validateSheet(raw,name);
+  const cols=Object.keys(raw[0]||{});
+  const bar=document.getElementById('fbar'+slot);
+  bar.innerHTML=`${errors.length?'⚠️':'✅'} <b>シート: ${name}</b> | ${cleanData.length.toLocaleString()} 行 | ${cols.length} 列 | ${errors.length?`<span style="color:var(--amber)">${errors.length}件のエラー</span>`:'エラーなし'}`;
+  const eb=document.getElementById('errBox'+slot);
+  if(errors.length){
+    eb.classList.remove('hidden');
+    eb.innerHTML=`<div class="wb warn">⚠️ ${errors.length}件の問題が見つかりました<div class="error-list">${errors.slice(0,50).map(e=>`<div class="error-item">${e}</div>`).join('')}${errors.length>50?`<div class="error-item">... 他${errors.length-50}件</div>`:''}</div></div>`;
+  }else eb.classList.add('hidden');
+  if(slot===1){
+    trainRawData=cleanData;trainColNames=cols;
+    detectTypes(cols,cleanData);
+    document.getElementById('card2').classList.remove('hidden');
+    document.getElementById('b2').className='snum sa';
+    buildSelects();updateMethods();updateDateOptions();
+  }else{
+    predRawData=cleanData;predColNames=cols;
+    document.getElementById('predControls').classList.remove('hidden');
+    checkPredCols();
+  }
+}
+
+function validateSheet(data,sheetName){
+  const cleanData=[],errors=[];
+  if(!data.length){errors.push(`シート「${sheetName}」にデータがありません`);return{cleanData,errors};}
+  const cols=Object.keys(data[0]);
+  data.forEach((row,ri)=>{
+    const ln=ri+2;
+    cols.forEach(col=>{
+      const v=row[col];
+      if(v===null||v===undefined)errors.push(`シート「${sheetName}」 / カラム「${col}」 / ${ln}行目: 値がnullです`);
+    });
+    cleanData.push(row);
+  });
+  return{cleanData,errors};
+}
+
+// ===== TYPE DETECTION =====
+function detectTypes(cols,data){
+  trainColTypes={};
+  cols.forEach(c=>{
+    const vals=data.map(r=>r[c]).filter(v=>v!==''&&v!==null&&v!==undefined);
+    if(!vals.length){trainColTypes[c]='cat';return;}
+    // date detection
+    const dateCount=vals.filter(v=>isDateLike(v)).length;
+    if(dateCount/vals.length>0.7){trainColTypes[c]='date';return;}
+    const numCount=vals.filter(v=>typeof v==='number'||(typeof v==='string'&&!isNaN(v)&&v!=='')).length;
+    trainColTypes[c]=numCount/vals.length>0.8?'num':'cat';
+  });
+}
+function isDateLike(v){
+  if(!v)return false;
+  if(typeof v==='number'&&v>40000&&v<60000)return true; // Excel serial
+  if(typeof v==='string'){
+    return /^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(v)||/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/.test(v)||/^\d{4}年\d{1,2}月\d{1,2}日/.test(v);
+  }
+  return false;
+}
+function parseDate(v){
+  if(!v)return null;
+  if(typeof v==='number'){// Excel serial
+    const d=new Date((v-25569)*86400000);return isNaN(d)?null:d;
+  }
+  const s=String(v).replace(/年/,'-').replace(/月/,'-').replace(/日/,'');
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+
+// ===== UI =====
+function updateDateOptions(){
+  const sel=document.getElementById('dateSel');
+  sel.innerHTML='<option value="">使用しない</option>';
+  trainColNames.forEach(c=>{
+    if(trainColTypes[c]==='date'){const o=document.createElement('option');o.value=c;o.textContent=c+' (日付)';sel.appendChild(o);}
+  });
+  // also allow any col as date
+  trainColNames.forEach(c=>{
+    if(trainColTypes[c]!=='date'){const o=document.createElement('option');o.value=c;o.textContent=c+' ('+(trainColTypes[c]==='num'?'数値':'カテゴリ')+')';sel.appendChild(o);}
+  });
+  sel.onchange=()=>{
+    const v=sel.value;
+    document.getElementById('dateOptions').classList.toggle('hidden',!v);
+    if(v)checkDateWarnings(v);
+    buildFeatureCbs();
+  };
+}
+
+function checkDateWarnings(col){
+  const n=trainRawData.length;
+  const wb=document.getElementById('dateWarnBox');
+  const warns=[];
+  if(document.getElementById('tog_month').checked&&n<500)warns.push(`月の変換には500行以上推奨です（現在${n}行）`);
+  if(document.getElementById('tog_quarter').checked&&n<200)warns.push(`四半期の変換には200行以上推奨です（現在${n}行）`);
+  if(warns.length){wb.classList.remove('hidden');wb.innerHTML=`<div class="wb warn" style="margin:0">${warns.map(w=>`⚠️ ${w}`).join('<br>')}</div>`;}
+  else wb.classList.add('hidden');
+}
+
+['tog_month','tog_quarter'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{
+    const dc=document.getElementById('dateSel').value;
+    if(dc)checkDateWarnings(dc);
+    buildFeatureCbs();
+  });
+});
+document.getElementById('tog_dow').addEventListener('change',buildFeatureCbs);
+
+function buildSelects(){
+  const tgt=document.getElementById('targetCol');
+  tgt.innerHTML='<option value="">-- 選択 --</option>';
+  trainColNames.forEach(c=>{
+    if(trainColTypes[c]==='date')return;
+    const o=document.createElement('option');o.value=c;o.textContent=c+' ('+(trainColTypes[c]==='num'?'数値':'カテゴリ')+')';tgt.appendChild(o);
+  });
+  buildFeatureCbs();
+}
+document.getElementById('targetCol').addEventListener('change',buildFeatureCbs);
+
+function buildFeatureCbs(){
+  const tgt=document.getElementById('targetCol').value;
+  const dateCol=document.getElementById('dateSel').value;
+  const method=document.getElementById('methodSel').value;
+  const isLinear=method==='linear';
+  const ctr=document.getElementById('featureCbs');
+  ctr.innerHTML='';
+
+  // date-derived columns first
+  if(dateCol){
+    const derived=getDateDerived(dateCol,isLinear);
+    derived.forEach(d=>{
+      const div=document.createElement('div');
+      div.className='cb-item checked date-derived';div.dataset.col='__date__'+d.key;
+      div.innerHTML=`<span>${d.label}</span><span class="tag tag-date">日付由来</span>${isLinear?'<span style="font-size:10px;color:var(--red);margin-left:4px">重回帰では除外</span>':''}`;
+      div.onclick=()=>{if(!isLinear)div.classList.toggle('checked');}
+      ctr.appendChild(div);
+    });
+  }
+
+  trainColNames.forEach(c=>{
+    if(c===tgt||c===dateCol||trainColTypes[c]==='date')return;
+    const type=trainColTypes[c]==='num'?'num':'cat';
+    const div=document.createElement('div');
+    div.className=`cb-item checked ${type}`;div.dataset.col=c;
+    div.innerHTML=`<span>${c}</span><span class="tag tag-${type}">${type==='num'?'数値':'カテゴリ'}</span>`;
+    div.onclick=()=>div.classList.toggle('checked');
+    ctr.appendChild(div);
+  });
+
+  document.getElementById('linearDateNote').classList.toggle('hidden',!isLinear||!dateCol);
+}
+
+function getDateDerived(col,isLinear){
+  const derived=[];
+  if(document.getElementById('tog_dow').checked)derived.push({key:'dow',label:col+'_曜日(0-6)'});
+  if(!isLinear){
+    if(document.getElementById('tog_month').checked)derived.push({key:'month',label:col+'_月(1-12)'});
+    if(document.getElementById('tog_quarter').checked)derived.push({key:'quarter',label:col+'_四半期(1-4)'});
+  }
+  return derived;
+}
+
+function checkAll(v){document.querySelectorAll('#featureCbs .cb-item').forEach(el=>{if(el.classList.contains('date-derived')&&document.getElementById('methodSel').value==='linear')return;if(v)el.classList.add('checked');else el.classList.remove('checked');});}
+
+function switchMode(m,el){
+  mode=m;
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  updateMethods();buildFeatureCbs();
+}
+function updateMethods(){
+  const sel=document.getElementById('methodSel');
+  if(mode==='clf'){sel.innerHTML=`<option value="rf">ランダムフォレスト</option><option value="gbdt">勾配ブースティング（GBDT）</option><option value="lr">ロジスティック回帰</option>`;}
+  else{sel.innerHTML=`<option value="rf">ランダムフォレスト（回帰）</option><option value="gbdt">勾配ブースティング（回帰）</option><option value="linear">重回帰</option>`;}
+  sel.onchange=()=>{buildFeatureCbs();};
+}
+
+function getSelectedFeatures(){
+  return[...document.querySelectorAll('#featureCbs .cb-item.checked')].map(el=>el.dataset.col);
+}
+
+function checkPredCols(){
+  if(!trainedModel)return;
+  const realFeatures=trainedModel.features.filter(f=>!f.startsWith('__date__'));
+  const missing=realFeatures.filter(f=>!predColNames.includes(f));
+  if(missing.length){
+    const eb=document.getElementById('errBox2');eb.classList.remove('hidden');
+    eb.innerHTML=`<div class="wb ng">❌ 以下の列が予測データに見つかりません<div class="error-list">${missing.map(c=>`<div class="error-item">カラム「${c}」が存在しません</div>`).join('')}</div></div>`;
+  }
+}
+
+// ===== DATE FEATURE EXTRACTION =====
+function extractDateFeatures(data,dateCol,features){
+  return data.map(row=>{
+    const newRow={...row};
+    const d=parseDate(row[dateCol]);
+    features.forEach(f=>{
+      if(!f.startsWith('__date__'))return;
+      const key=f.replace('__date__','');
+      if(!d){newRow[f]=0;return;}
+      if(key==='dow')newRow[f]=d.getDay();
+      else if(key==='month')newRow[f]=d.getMonth()+1;
+      else if(key==='quarter')newRow[f]=Math.ceil((d.getMonth()+1)/3);
+    });
+    return newRow;
+  });
+}
+
+// ===== DATA PREP =====
+function prepareData(data,features,target,catMaps_in,regression){
+  const dateCol=document.getElementById('dateSel').value;
+  let workData=data;
+  const dateDerivedFeatures=features.filter(f=>f.startsWith('__date__'));
+  if(dateCol&&dateDerivedFeatures.length){
+    workData=extractDateFeatures(data,dateCol,dateDerivedFeatures);
+  }
+  const realFeatures=features.filter(f=>!f.startsWith('__date__'));
+  const allFeatures=[...realFeatures,...dateDerivedFeatures];
+
+  const catCols=realFeatures.filter(f=>trainColTypes[f]==='cat');
+  const numCols=[...realFeatures.filter(f=>trainColTypes[f]==='num'),...dateDerivedFeatures];
+  const catMaps=catMaps_in||{};
+  if(!catMaps_in){catCols.forEach(c=>{catMaps[c]=[...new Set(workData.map(r=>String(r[c])))].sort();});}
+
+  const X=[],y=[],rowErrors=[];
+  workData.forEach((row,ri)=>{
+    const ln=ri+2;
+    if(target&&(row[target]===''||row[target]===null||row[target]===undefined)){rowErrors.push({ln,msg:`目的変数「${target}」が${ln}行目で空です`});return;}
+    const vec=[];
+    numCols.forEach(c=>{
+      const raw=row[c];
+      const v=typeof raw==='number'?raw:parseFloat(raw);
+      vec.push(isNaN(v)?0:v);
+    });
+    catCols.forEach(c=>{catMaps[c].forEach(v=>vec.push(String(row[c])===v?1:0));});
+    X.push(vec);
+    if(target)y.push(row[target]);
+  });
+
+  let classes=null,yNum=y;
+  if(target&&mode==='clf'){classes=[...new Set(y)].sort();yNum=y.map(v=>classes.indexOf(String(v)));}
+  else if(target){yNum=y.map(v=>parseFloat(v)||0);}
+
+  let featNames=[...numCols];
+  catCols.forEach(c=>catMaps[c].forEach(v=>featNames.push(c+'='+v)));
+  return{X,y:yNum,classes,featNames,catMaps,numCols,catCols,rowErrors};
+}
+
+function trainTestSplit(X,y,ratio){
+  const n=X.length,tn=Math.floor(n*ratio),idx=[...Array(n).keys()];
+  for(let i=n-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  const ti=idx.slice(0,tn),si=idx.slice(tn);
+  return{XTrain:ti.map(i=>X[i]),yTrain:ti.map(i=>y[i]),XTest:si.map(i=>X[i]),yTest:si.map(i=>y[i])};
+}
+function normalize(XTr,XTe){
+  const m=XTr[0]?.length||0,means=Array(m).fill(0),stds=Array(m).fill(1);
+  if(!XTr.length)return{XTrainN:[],XTestN:[],means,stds,norm:x=>x};
+  XTr.forEach(r=>r.forEach((v,j)=>means[j]+=v));means.forEach((_,j)=>means[j]/=XTr.length);
+  XTr.forEach(r=>r.forEach((v,j)=>stds[j]+=(v-means[j])**2));stds.forEach((_,j)=>{stds[j]=Math.sqrt(stds[j]/XTr.length)||1;});
+  const norm=X=>X.map(r=>r.map((v,j)=>(v-means[j])/stds[j]));
+  return{XTrainN:norm(XTr),XTestN:norm(XTe),means,stds,norm};
+}
+
+// ===== ML CORE =====
+function gini(y){if(!y.length)return 0;const c={};y.forEach(v=>c[v]=(c[v]||0)+1);return 1-Object.values(c).reduce((s,v)=>s+(v/y.length)**2,0);}
+function mse(y){if(!y.length)return 0;const m=mean(y);return y.reduce((s,v)=>s+(v-m)**2,0)/y.length;}
+function mean(y){return y.length?y.reduce((a,b)=>a+b,0)/y.length:0;}
+function mode_(y){const c={};y.forEach(v=>c[v]=(c[v]||0)+1);return parseInt(Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]);}
+function buildTree(X,y,depth,maxD,minS,nF,reg){
+  const n=X.length,imp=reg?mse:gini,lv=reg?mean(y):mode_(y);
+  if(depth>=maxD||n<minS||imp(y)<1e-7)return{leaf:true,val:lv,n};
+  const nFeat=X[0].length;let fi=[...Array(nFeat).keys()];
+  if(nF<nFeat){for(let i=nFeat-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fi[i],fi[j]]=[fi[j],fi[i]];}fi=fi.slice(0,nF);}
+  let bG=-Infinity,bF=-1,bT=0;const pI=imp(y);
+  for(const f of fi){
+    const vs=[...new Set(X.map(r=>r[f]))].sort((a,b)=>a-b);
+    for(let vi=0;vi<vs.length-1;vi++){
+      const t=(vs[vi]+vs[vi+1])/2,lm=X.map(r=>r[f]<=t);
+      const yL=y.filter((_,i)=>lm[i]),yR=y.filter((_,i)=>!lm[i]);
+      if(!yL.length||!yR.length)continue;
+      const g=pI-(yL.length/n)*imp(yL)-(yR.length/n)*imp(yR);
+      if(g>bG){bG=g;bF=f;bT=t;}
+    }
+  }
+  if(bF===-1)return{leaf:true,val:lv,n};
+  const lm=X.map(r=>r[bF]<=bT);
+  return{leaf:false,feat:bF,thresh:bT,gain:bG,n,
+    left:buildTree(X.filter((_,i)=>lm[i]),y.filter((_,i)=>lm[i]),depth+1,maxD,minS,nF,reg),
+    right:buildTree(X.filter((_,i)=>!lm[i]),y.filter((_,i)=>!lm[i]),depth+1,maxD,minS,nF,reg)};
+}
+function pTree(t,x){return t.leaf?t.val:x[t.feat]<=t.thresh?pTree(t.left,x):pTree(t.right,x);}
+function fiTree(t,n){const imp=Array(n).fill(0);function w(nd){if(nd.leaf)return;imp[nd.feat]+=(nd.gain||0)*nd.n;w(nd.left);w(nd.right);}w(t);return imp;}
+
+function trainRF(X,y,nT=50,maxD=8,reg=false){
+  const n=X.length,sq=Math.max(1,Math.round(Math.sqrt(X[0].length)));
+  const trees=Array.from({length:nT},()=>{const idx=Array.from({length:n},()=>Math.floor(Math.random()*n));return buildTree(idx.map(i=>X[i]),idx.map(i=>y[i]),0,maxD,5,sq,reg);});
+  return{trees,nFeat:X[0].length,regression:reg};
+}
+function predRF(m,X){return X.map(x=>{const p=m.trees.map(t=>pTree(t,x));if(m.regression)return mean(p);const c={};p.forEach(v=>c[v]=(c[v]||0)+1);return parseInt(Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]);});}
+function predRFProba(m,X,nc){return X.map(x=>{const p=m.trees.map(t=>pTree(t,x));const pr=Array(nc).fill(0);p.forEach(v=>pr[v]=(pr[v]||0)+1);return pr.map(c=>c/p.length);});}
+function fiRF(m){const imp=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>imp[i]+=v);});const s=imp.reduce((a,b)=>a+b,0)||1;return imp.map(v=>v/s);}
+
+function sig(z){return 1/(1+Math.exp(-Math.max(-500,Math.min(500,z))));}
+function trainGBDT(X,y,nT=50,lr=0.1,maxD=4,reg=false){
+  const n=y.length,sq=Math.max(1,Math.round(Math.sqrt(X[0].length)));
+  const trees=[],init=reg?mean(y):0;let p=Array(n).fill(init);
+  for(let t=0;t<nT;t++){
+    const res=y.map((v,i)=>v-p[i]);
+    const tree=buildTree(X,res,0,maxD,5,sq,true);trees.push(tree);
+    p=p.map((v,i)=>v+lr*pTree(tree,X[i]));
+    if(!reg)p=p.map(v=>sig(v));
+  }
+  return{trees,lr,init,nFeat:X[0].length,regression:reg};
+}
+function predGBDT(m,X){return X.map(x=>{let p=m.init;m.trees.forEach(t=>p+=m.lr*pTree(t,x));return m.regression?p:sig(p)>=0.5?1:0;});}
+function predGBDTProba(m,X){return X.map(x=>{let p=m.init;m.trees.forEach(t=>p+=m.lr*pTree(t,x));const p1=sig(p);return[1-p1,p1];});}
+function fiGBDT(m){const imp=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>imp[i]+=v);});const s=imp.reduce((a,b)=>a+b,0)||1;return imp.map(v=>v/s);}
+
+function trainLR(X,y,lr=0.1,ep=200){
+  const n=X.length,m=X[0].length;let w=Array(m).fill(0),b=0;
+  for(let e=0;e<ep;e++){const dw=Array(m).fill(0);let db=0;X.forEach((x,i)=>{const err=sig(x.reduce((s,v,j)=>s+v*w[j],b))-y[i];x.forEach((v,j)=>dw[j]+=err*v);db+=err;});w=w.map((v,j)=>v-lr*dw[j]/n);b-=lr*db/n;}
+  return{w,b};
+}
+function predLR(m,X){return X.map(x=>sig(x.reduce((s,v,j)=>s+v*m.w[j],m.b))>=0.5?1:0);}
+function predLRProba(m,X){return X.map(x=>{const p=sig(x.reduce((s,v,j)=>s+v*m.w[j],m.b));return[1-p,p];});}
+
+function solveLS(A,b){
+  const n=A.length,M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){let mx=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[mx][c]))mx=r;[M[c],M[mx]]=[M[mx],M[c]];if(Math.abs(M[c][c])<1e-12)continue;for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/M[c][c];for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k];}}
+  return M.map((r,i)=>r[n]/r[i]);
+}
+function trainLinear(X,y){
+  const n=X.length,m=X[0].length,Xb=X.map(r=>[1,...r]),mb=m+1;
+  const XtX=Array.from({length:mb},()=>Array(mb).fill(0)),Xty=Array(mb).fill(0);
+  Xb.forEach((r,i)=>{r.forEach((v,j)=>{Xty[j]+=v*y[i];r.forEach((u,k)=>XtX[j][k]+=v*u);});});
+  for(let j=0;j<mb;j++)XtX[j][j]+=1e-4;
+  return{w:solveLS(XtX,Xty)};
+}
+function predLinear(m,X){return X.map(x=>m.w[0]+x.reduce((s,v,j)=>s+v*m.w[j+1],0));}
+
+// ===== METRICS =====
+function accuracy(a,b){return a.filter((v,i)=>v===b[i]).length/a.length;}
+function confMatrix(a,b,nc){const m=Array.from({length:nc},()=>Array(nc).fill(0));a.forEach((v,i)=>m[v][b[i]]++);return m;}
+function f1(a,b,nc){
+  if(nc===2){const tp=a.filter((v,i)=>v===1&&b[i]===1).length,fp=a.filter((v,i)=>v===0&&b[i]===1).length,fn=a.filter((v,i)=>v===1&&b[i]===0).length;const p=tp/(tp+fp)||0,r=tp/(tp+fn)||0;return{f1:2*p*r/(p+r)||0,p,r};}
+  let s=0;for(let c=0;c<nc;c++){const tp=a.filter((v,i)=>v===c&&b[i]===c).length,fp=a.filter((v,i)=>v!==c&&b[i]===c).length,fn=a.filter((v,i)=>v===c&&b[i]!==c).length;const p=tp/(tp+fp)||0,r=tp/(tp+fn)||0;s+=2*p*r/(p+r)||0;}
+  return{f1:s/nc};
+}
+function rocAUC(yT,yP){
+  const pts=yP.map((p,i)=>({p:p[1],y:yT[i]})).sort((a,b)=>b.p-a.p);
+  const P=yT.filter(v=>v===1).length,N=yT.length-P;
+  if(!P||!N)return{auc:0.5,pts:[]};
+  let tp=0,fp=0,auc=0,ptp=0,pfp=0;const curve=[[0,0]];
+  pts.forEach(pt=>{if(pt.y===1)tp++;else{fp++;auc+=(tp-ptp)*(fp-pfp)/2+(tp+ptp)*(fp-pfp)/2;ptp=tp;pfp=fp;}curve.push([fp/N,tp/P]);});
+  return{auc:(auc+(P-ptp)*1)/P/N,pts:curve};
+}
+function rmse(a,b){return Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0)/a.length);}
+function mae(a,b){return a.reduce((s,v,i)=>s+Math.abs(v-b[i]),0)/a.length;}
+function r2(a,b){const m=mean(a),ss_t=a.reduce((s,v)=>s+(v-m)**2,0),ss_r=a.reduce((s,v,i)=>s+(v-b[i])**2,0);return 1-ss_r/(ss_t||1);}
+
+// ===== SCORE CALCULATION =====
+function calcScore(metrics,regression,n){
+  let score=0,items=[];
+  if(!regression){
+    // 分類スコア
+    const acc=metrics.accuracy,f1v=metrics.f1,auc=metrics.auc||0.5;
+    // Accuracy (40%)
+    const accS=Math.min(10,Math.max(0,(acc-0.5)/0.5*10));
+    // F1 (35%)
+    const f1S=Math.min(10,Math.max(0,f1v*10));
+    // AUC (25%)
+    const aucS=Math.min(10,Math.max(0,(auc-0.5)/0.5*10));
+    score=accS*0.40+f1S*0.35+aucS*0.25;
+    // Overfit penalty
+    const diff=metrics.trainAcc-acc;
+    if(diff>0.2)score=Math.max(0,score-2);
+    else if(diff>0.1)score=Math.max(0,score-1);
+    items=[
+      {label:'正解率',val:(acc*100).toFixed(1)+'%',score:accS,comment:acc>=0.9?'非常に高い':acc>=0.75?'良好':acc>=0.6?'まずまず':'改善の余地あり'},
+      {label:'F1スコア',val:f1v.toFixed(3),score:f1S,comment:f1v>=0.9?'非常に高い':f1v>=0.75?'良好':f1v>=0.5?'まずまず':'改善の余地あり'},
+      {label:'AUC-ROC',val:auc>0?auc.toFixed(3):'—',score:auc>0?aucS:null,comment:auc>=0.9?'優秀':auc>=0.75?'良好':auc>=0.6?'まずまず':'ランダムに近い'},
+    ];
+  } else {
+    // 回帰スコア
+    const r2v=metrics.r2,rmseR=metrics.rmseRel||0;
+    const r2S=Math.min(10,Math.max(0,r2v*10));
+    const rmseS=Math.min(10,Math.max(0,(1-rmseR)*10));
+    score=r2S*0.6+rmseS*0.4;
+    const diff=metrics.trainR2-r2v;
+    if(diff>0.3)score=Math.max(0,score-2);
+    else if(diff>0.15)score=Math.max(0,score-1);
+    items=[
+      {label:'R²（決定係数）',val:r2v.toFixed(3),score:r2S,comment:r2v>=0.9?'非常に高い':r2v>=0.7?'良好':r2v>=0.5?'まずまず':'説明力が低い'},
+      {label:'RMSE（相対）',val:(rmseR*100).toFixed(1)+'%',score:rmseS,comment:rmseR<=0.05?'非常に小さい':rmseR<=0.15?'良好':rmseR<=0.3?'まずまず':'誤差が大きい'},
+      {label:'MAE',val:metrics.mae?.toFixed(3)||'—',score:null,comment:'平均絶対誤差'},
+    ];
+  }
+  // サンプル数ペナルティ
+  if(n<50)score=Math.max(0,score-1.5);
+  else if(n<100)score=Math.max(0,score-0.5);
+  score=Math.min(10,Math.max(0,score));
+  const grade=score>=8.5?{g:'S',color:'#7c3aed'}:score>=7?{g:'A',color:'#16a34a'}:score>=5.5?{g:'B',color:'#2563eb'}:score>=4?{g:'C',color:'#d97706'}:{g:'D',color:'#dc2626'};
+  return{score,items,grade,n};
+}
+
+function gradeEmoji(g){return g==='S'?'🏆':g==='A'?'✅':g==='B'?'🔵':g==='C'?'⚠️':'❌';}
+
+function showScorePanel(metrics,regression,n,cvResult){
+  const{score,items,grade}=calcScore(metrics,regression,n);
+  const pct=(score/10*100).toFixed(0);
+  const gaugeColor=grade.color;
+  const methodName=document.getElementById('methodSel').options[document.getElementById('methodSel').selectedIndex].text;
+  const targetName=document.getElementById('targetCol').value;
+
+  let html=`
+  <div class="score-header">
+    <div class="score-title">総合スコア — ${methodName} で「${targetName}」を予測</div>
+  </div>
+  <div class="score-main">
+    <div>
+      <span class="score-num" style="color:${gaugeColor}">${score.toFixed(1)}</span>
+      <span class="score-denom"> / 10</span>
+    </div>
+    <div class="score-grade" style="color:${gaugeColor}">${gradeEmoji(grade.g)} ${grade.g}評価</div>
+  </div>
+  <div class="score-gauge"><div class="score-gauge-fill" style="width:${pct}%;background:${gaugeColor}"></div></div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">${scoreComment(score,regression,metrics,n)}</div>
+  <div class="score-items">`;
+  items.forEach(item=>{
+    const s=item.score;
+    const dot=s===null?'':s>=7?'<span class="sdot dok"></span>':s>=4?'<span class="sdot dwarn"></span>':'<span class="sdot dng"></span>';
+    html+=`<div class="score-item"><div class="score-item-label">${item.label}</div><div class="score-item-val">${dot}${item.val}</div><div class="score-item-comment">${item.comment}</div></div>`;
+  });
+  if(cvResult){
+    const cvFmt=v=>regression?v.toFixed(3):(v*100).toFixed(1)+'%';
+    html+=`<div class="score-item"><div class="score-item-label">CV平均スコア</div><div class="score-item-val">${cvFmt(cvResult.mean)}</div><div class="score-item-comment">±${cvFmt(cvResult.std)} (${cvResult.scores.length}fold)</div></div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('scorePanel').innerHTML=html;
+
+  // コピペサマリー生成
+  buildCopySummary(metrics,regression,score,grade,items,methodName,targetName,cvResult,n);
+}
+
+function scoreComment(score,regression,metrics,n){
+  const nWarn=n<100?` ※サンプル数が少ない(${n}件)ため信頼性に注意。`:'';
+  if(score>=8.5)return`非常に高い精度のモデルです。実用的に利用できるレベルです。${nWarn}`;
+  if(score>=7)return`良好なモデルです。多くの場面で役立つ精度があります。${nWarn}`;
+  if(score>=5.5)return`まずまずのモデルです。改善の余地はありますが一定の予測力があります。${nWarn}`;
+  if(score>=4)return`やや精度が低めです。特徴量の見直しや手法変更を検討してください。${nWarn}`;
+  return`精度が低く、改善が必要です。データや特徴量を見直してください。${nWarn}`;
+}
+
+function buildCopySummary(metrics,regression,score,grade,items,method,target,cvResult,n){
+  const now=new Date().toLocaleString('ja-JP');
+  const overfitStatus=metrics.overfitLevel;
+  let text=`===== 機械学習モデル評価サマリー =====
+作成日時: ${now}
+目的変数: ${target}
+使用手法: ${method}
+タスク種別: ${regression?'回帰（数値予測）':'分類'}
+サンプル数: ${n}件（訓練+テスト）
+
+--- 総合スコア ---
+スコア: ${score.toFixed(1)} / 10  (${grade.g}評価)
+過学習状態: ${overfitStatus}
+
+--- 詳細指標 ---`;
+  items.forEach(it=>{text+=`\n${it.label}: ${it.val}  →  ${it.comment}`;});
+  if(!regression&&metrics.trainAcc!==undefined)text+=`\n訓練正解率: ${(metrics.trainAcc*100).toFixed(1)}%`;
+  if(regression&&metrics.trainR2!==undefined)text+=`\nR²（訓練）: ${metrics.trainR2.toFixed(3)}`;
+  if(cvResult){
+    const f=v=>regression?v.toFixed(3):(v*100).toFixed(1)+'%';
+    text+=`\n\n--- 交差検証 (${cvResult.scores.length}-fold CV) ---`;
+    text+=`\n平均スコア: ${f(cvResult.mean)}  標準偏差: ${f(cvResult.std)}`;
+    text+=`\n各fold: [${cvResult.scores.map(f).join(', ')}]`;
+  }
+  if(metrics.featureImportance&&metrics.featureImportance.length){
+    text+=`\n\n--- 重要な特徴量 (上位5件) ---`;
+    metrics.featureImportance.slice(0,5).forEach((fi,i)=>{text+=`\n${i+1}. ${fi.name}: ${(fi.val*100).toFixed(1)}%`;});
+  }
+  text+=`\n\n=====================================
+このサマリーをAIに貼り付けて「このモデルを評価してください」と聞いてみてください。`;
+  document.getElementById('summaryText').textContent=text;
+  lastMetrics={text};
+}
+
+function copySummary(){
+  const text=document.getElementById('summaryText').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.querySelector('.btn-copy');
+    btn.textContent='✅ コピーしました';
+    setTimeout(()=>btn.textContent='📋 コピー',2000);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    const btn=document.querySelector('.btn-copy');btn.textContent='✅ コピーしました';setTimeout(()=>btn.textContent='📋 コピー',2000);
+  });
+}
+
+// ===== k-FOLD =====
+function kfoldCV(X,y,k,method,regression){
+  const n=X.length,fs=Math.floor(n/k),scores=[];
+  for(let f=0;f<k;f++){
+    const ts=new Set(Array.from({length:fs},(_,i)=>f*fs+i));
+    const XTr=X.filter((_,i)=>!ts.has(i)),yTr=y.filter((_,i)=>!ts.has(i));
+    const XTe=X.filter((_,i)=>ts.has(i)),yTe=y.filter((_,i)=>ts.has(i));
+    if(!XTr.length||!XTe.length)continue;
+    let model,preds;
+    if(method==='lr'||method==='linear'){const{XTrainN,norm}=normalize(XTr,[]);const XTeN=norm(XTe);model=(method==='lr')?trainLR(XTrainN,yTr):trainLinear(XTrainN,yTr);preds=(method==='lr')?predLR(model,XTeN):predLinear(model,XTeN);}
+    else if(method==='rf'){model=trainRF(XTr,yTr,30,7,regression);preds=predRF(model,XTe);}
+    else{model=trainGBDT(XTr,yTr,30,0.1,4,regression);preds=predGBDT(model,XTe);}
+    scores.push(regression?r2(yTe,preds):accuracy(yTe,preds));
+  }
+  return{scores,mean:mean(scores),std:Math.sqrt(mean(scores.map(s=>(s-mean(scores))**2)))};
+}
+
+function learningCurve(XTr,yTr,XTe,yTe,method,regression,steps=7){
+  const n=XTr.length;
+  return Array.from({length:steps},(_,i)=>Math.floor(n*(i+1)/steps)).map(sz=>{
+    const Xs=XTr.slice(0,sz),ys=yTr.slice(0,sz);if(sz<5)return{sz,train:0,test:0};
+    let model,pTr,pTe;
+    if(method==='rf'){model=trainRF(Xs,ys,25,7,regression);pTr=predRF(model,Xs);pTe=predRF(model,XTe);}
+    else if(method==='gbdt'){model=trainGBDT(Xs,ys,25,0.1,4,regression);pTr=predGBDT(model,Xs);pTe=predGBDT(model,XTe);}
+    else if(method==='lr'){const{XTrainN,norm}=normalize(Xs,[]);const XTeN=norm(XTe);model=trainLR(XTrainN,ys);pTr=predLR(model,XTrainN);pTe=predLR(model,XTeN);}
+    else{model=trainLinear(Xs,ys);pTr=predLinear(model,Xs);pTe=predLinear(model,XTe);}
+    const sc=regression?(a,b)=>Math.max(0,r2(a,b)):(a,b)=>accuracy(a,b);
+    return{sz,train:sc(ys,pTr),test:sc(yTe,pTe)};
+  });
+}
+
+// ===== MAIN RUN =====
+async function runAnalysis(){
+  const target=document.getElementById('targetCol').value,method=document.getElementById('methodSel').value;
+  const features=getSelectedFeatures(),splitRatio=parseInt(document.getElementById('splitRatio').value)/100;
+  const kFold=parseInt(document.getElementById('kfoldSel').value),regression=mode==='reg';
+  if(!target){alert('目的変数を選択してください');return;}
+  if(!features.filter(f=>!f.startsWith('__date__')||document.getElementById('methodSel').value!=='linear').length&&!features.filter(f=>!f.startsWith('__date__')).length){alert('説明変数を1つ以上選択してください');return;}
+
+  document.getElementById('stepResult').classList.remove('hidden');
+  document.getElementById('resultLoading').classList.remove('hidden');
+  document.getElementById('resultContent').classList.add('hidden');
+  setP(5);await sl(30);
+
+  const{X,y,classes,featNames,catMaps,numCols,catCols,rowErrors}=prepareData(trainRawData,features,target,null,regression);
+  if(rowErrors.length){
+    const eb=document.getElementById('errBox1');eb.classList.remove('hidden');
+    eb.innerHTML=`<div class="wb warn" style="margin-top:.5rem">⚠️ ${rowErrors.length}行をスキップ<div class="error-list">${rowErrors.slice(0,20).map(e=>`<div class="error-item">${e.msg}</div>`).join('')}</div></div>`;
+  }
+  if(X.length<10){alert('有効データが少なすぎます（最低10行）');return;}
+  const{XTrain,yTrain,XTest,yTest}=trainTestSplit(X,y,splitRatio);
+  setP(15);await sl(10);
+
+  let XTrM=XTrain,XTeM=XTest,normMeans=[],normStds=[];
+  if(method==='lr'||method==='linear'){const no=normalize(XTrain,XTest);XTrM=no.XTrainN;XTeM=no.XTestN;normMeans=no.means;normStds=no.stds;}
+  setP(20);await sl(10);
+
+  let model;
+  if(method==='rf')model=trainRF(XTrM,yTrain,50,8,regression);
+  else if(method==='gbdt')model=trainGBDT(XTrM,yTrain,50,0.1,4,regression);
+  else if(method==='lr')model=trainLR(XTrM,yTrain);
+  else model=trainLinear(XTrM,yTrain);
+  setP(55);await sl(10);
+
+  let yPTr,yPTe,probaTest=null;
+  if(method==='rf'){yPTr=predRF(model,XTrM);yPTe=predRF(model,XTeM);if(!regression)probaTest=predRFProba(model,XTeM,classes?classes.length:2);}
+  else if(method==='gbdt'){yPTr=predGBDT(model,XTrM);yPTe=predGBDT(model,XTeM);if(!regression)probaTest=predGBDTProba(model,XTeM);}
+  else if(method==='lr'){yPTr=predLR(model,XTrM);yPTe=predLR(model,XTeM);probaTest=predLRProba(model,XTeM);}
+  else{yPTr=predLinear(model,XTrM);yPTe=predLinear(model,XTeM);}
+  setP(70);await sl(10);
+
+  const trainScore=regression?r2(yTrain,yPTr):accuracy(yTrain,yPTr);
+  const testScore=regression?r2(yTest,yPTe):accuracy(yTest,yPTe);
+  const diff=trainScore-testScore;
+  const overfitLevel=diff>0.2?'過学習の可能性が高い':diff>0.1?'軽度の過学習の可能性':'正常';
+
+  let cvResult=null;
+  if(kFold>0){cvResult=kfoldCV(X,y,kFold,method,regression);setP(80);await sl(10);}
+
+  let fi=null,fiSorted=[];
+  if(method==='rf')fi=fiRF(model);
+  else if(method==='gbdt')fi=fiGBDT(model);
+  if(fi)fiSorted=[...fi.map((v,i)=>({val:v,name:featNames[i]||'feat'+i}))].sort((a,b)=>b.val-a.val);
+
+  setP(85);await sl(10);
+  const lc=learningCurve(XTrM,yTrain,XTeM,yTest,method,regression,7);
+  setP(95);await sl(10);
+
+  // Build metrics object
+  const nc=classes?classes.length:2;
+  let auc=0;
+  if(!regression&&probaTest&&nc===2){const ra=rocAUC(yTest,probaTest);auc=ra.auc;}
+  const testMae=regression?mae(yTest,yPTe):null;
+  const testRmse=regression?rmse(yTest,yPTe):null;
+  const yRange=regression?Math.max(...yTest)-Math.min(...yTest):1;
+  const metrics={
+    accuracy:!regression?accuracy(yTest,yPTe):null,
+    f1:!regression?f1(yTest,yPTe,nc).f1:null,
+    auc,
+    r2:regression?r2(yTest,yPTe):null,
+    rmse:testRmse,
+    mae:testMae,
+    rmseRel:regression&&yRange>0?testRmse/yRange:null,
+    trainAcc:!regression?trainScore:null,
+    trainR2:regression?trainScore:null,
+    overfitLevel,
+    featureImportance:fiSorted
+  };
+
+  trainedModel={model,features,target,catMaps,numCols,catCols,featNames,regression,classes,method,normMeans,normStds,dateCol:document.getElementById('dateSel').value};
+
+  document.getElementById('resultLoading').classList.add('hidden');
+  document.getElementById('resultContent').classList.remove('hidden');
+
+  showOverfit(trainScore,testScore,regression);
+  showScorePanel(metrics,regression,X.length,cvResult);
+  showMetrics(yTest,yPTe,yTrain,yPTr,trainScore,testScore,regression,classes,probaTest,cvResult);
+
+  if(!regression){
+    document.getElementById('clfResults').style.display='block';
+    document.getElementById('regResults').style.display='none';
+    showCM(yTest,yPTe,classes);
+    if(probaTest&&nc===2)showROC(yTest,probaTest);
+  }else{
+    document.getElementById('clfResults').style.display='none';
+    document.getElementById('regResults').style.display='block';
+    showScatter(yTest,yPTe);
+  }
+  if(fi)showFI(fi,featNames);else document.getElementById('fiCard').style.display='none';
+  showLC(lc,regression);
+  setP(100);
+
+  // Show step4
+  document.getElementById('card4').classList.remove('hidden');
+  const mn={rf:'ランダムフォレスト',gbdt:'GBDT',lr:'ロジスティック回帰',linear:'重回帰'};
+  document.getElementById('modelSummary').innerHTML=`✅ 学習済み: <b>${mn[method]}</b> | 目的変数: <b>${target}</b> | 説明変数: ${features.length}列`;
+}
+
+// ===== PREDICTION =====
+async function runPrediction(){
+  if(!trainedModel)return;
+  const tm=trainedModel;
+  const realFeatures=tm.features.filter(f=>!f.startsWith('__date__'));
+  const missing=realFeatures.filter(f=>!predColNames.includes(f));
+  if(missing.length){alert('必要な列が不足: '+missing.join(', '));return;}
+
+  const{X:Xpred,rowErrors}=prepareData(predRawData,tm.features,null,tm.catMaps,tm.regression);
+  let XpredM=Xpred;
+  if((tm.method==='lr'||tm.method==='linear')&&tm.normMeans.length){
+    XpredM=Xpred.map(r=>r.map((v,j)=>(v-(tm.normMeans[j]||0))/(tm.normStds[j]||1)));
+  }
+
+  let preds,probas=null;
+  if(tm.method==='rf'){preds=predRF(tm.model,XpredM);if(!tm.regression)probas=predRFProba(tm.model,XpredM,tm.classes.length);}
+  else if(tm.method==='gbdt'){preds=predGBDT(tm.model,XpredM);if(!tm.regression)probas=predGBDTProba(tm.model,XpredM);}
+  else if(tm.method==='lr'){preds=predLR(tm.model,XpredM);probas=predLRProba(tm.model,XpredM);}
+  else{preds=predLinear(tm.model,XpredM);}
+
+  let labels=preds;
+  if(!tm.regression&&tm.classes)labels=preds.map(v=>tm.classes[v]!==undefined?tm.classes[v]:v);
+
+  predResults=predRawData.slice(0,Xpred.length).map((row,i)=>{
+    const r={...row};
+    r['予測値（'+tm.target+'）']=tm.regression?parseFloat(labels[i].toFixed(4)):labels[i];
+    if(probas&&tm.classes)tm.classes.forEach((c,ci)=>{r[`確率_${c}`]=probas[i]?parseFloat((probas[i][ci]||0).toFixed(4)):0;});
+    return r;
+  });
+
+  document.getElementById('card5').classList.remove('hidden');
+  document.getElementById('predResultInfo').innerHTML=`✅ <b>${predResults.length.toLocaleString()}件</b>の予測が完了しました。`;
+
+  const keys=Object.keys(predResults[0]||{});
+  const predCol='予測値（'+tm.target+'）';
+  const predKeys=keys.filter(k=>k===predCol||k.startsWith('確率_'));
+  const otherKeys=keys.filter(k=>!predKeys.includes(k)).slice(0,7);
+  const showKeys=[...otherKeys,...predKeys];
+
+  document.getElementById('predTable').innerHTML=
+    `<thead><tr>${showKeys.map(k=>`<th style="${predKeys.includes(k)?'background:var(--purple-bg);color:var(--purple)':''}">${k}</th>`).join('')}</tr></thead>
+    <tbody>${predResults.slice(0,200).map(row=>`<tr>${showKeys.map(k=>`<td style="${predKeys.includes(k)?'font-weight:600;color:var(--purple)':''}">${row[k]!==undefined?row[k]:''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+function downloadCSV(){
+  if(!predResults.length)return;
+  const keys=Object.keys(predResults[0]);
+  const csv='\uFEFF'+keys.map(k=>'"'+k+'"').join(',')
+    +'\n'+predResults.map(r=>keys.map(k=>{const v=r[k]!==undefined?r[k]:'';return typeof v==='string'?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='predictions.csv';a.click();
+}
+
+// ===== DISPLAY =====
+function setP(v){document.getElementById('progressBar').style.width=v+'%';}
+function sl(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function showOverfit(trainScore,testScore,regression){
+  const box=document.getElementById('overfitBox'),diff=trainScore-testScore;
+  const label=regression?'R²':'正解率',fmt=v=>regression?v.toFixed(3):(v*100).toFixed(1)+'%';
+  box.classList.remove('hidden');
+  if(diff>0.2){box.className='wb ng';box.innerHTML=`<span class="sdot dng"></span><b>過学習の可能性が高い</b> — 訓練${label}: ${fmt(trainScore)} / テスト${label}: ${fmt(testScore)}（差: ${fmt(diff)}）<br><small>特徴量を絞る・手法を変えるなどを試してください。</small>`;}
+  else if(diff>0.1){box.className='wb warn';box.innerHTML=`<span class="sdot dwarn"></span><b>軽度の過学習の可能性</b> — 訓練: ${fmt(trainScore)} / テスト: ${fmt(testScore)}（差: ${fmt(diff)}）`;}
+  else{box.className='wb ok';box.innerHTML=`<span class="sdot dok"></span><b>過学習なし</b> — 訓練: ${fmt(trainScore)} / テスト: ${fmt(testScore)}`;}
+}
+
+function showMetrics(yTe,yPTe,yTr,yPTr,trainScore,testScore,regression,classes,probaTest,cvResult){
+  const nc=classes?classes.length:2;
+  let items=[];
+  if(regression){items=[{label:'R²（決定係数）',val:r2(yTe,yPTe).toFixed(3),sub:'1.0が最高'},{label:'RMSE',val:rmse(yTe,yPTe).toFixed(3),sub:'小さいほど良'},{label:'MAE',val:mae(yTe,yPTe).toFixed(3),sub:'平均絶対誤差'},{label:'訓練 R²',val:r2(yTr,yPTr).toFixed(3),sub:'訓練データ'}];}
+  else{const{f1:f1v}=f1(yTe,yPTe,nc);let auc='—';if(probaTest&&nc===2){const{auc:a}=rocAUC(yTe,probaTest);auc=a.toFixed(3);}items=[{label:'正解率',val:(accuracy(yTe,yPTe)*100).toFixed(1)+'%',sub:'テストデータ'},{label:'F1スコア',val:f1v.toFixed(3),sub:'精度と再現率の調和平均'},{label:'AUC-ROC',val:auc,sub:'2値分類のみ'},{label:'訓練 正解率',val:(trainScore*100).toFixed(1)+'%',sub:'訓練データ'}];}
+  document.getElementById('metricsGrid').innerHTML=`<div class="grid4">${items.map(it=>`<div class="metric"><div class="metric-label">${it.label}</div><div class="metric-value">${it.val}</div><div class="metric-sub">${it.sub}</div></div>`).join('')}</div>`;
+  const cv=document.getElementById('cvResult');
+  if(cvResult){const f=v=>regression?v.toFixed(3):(v*100).toFixed(1)+'%';cv.innerHTML=`<b>k-fold CV（${cvResult.scores.length}fold）</b> — 平均: <b>${f(cvResult.mean)}</b> ± ${f(cvResult.std)} &nbsp;各fold: [${cvResult.scores.map(f).join(', ')}]`;}
+}
+
+function showCM(yTe,yPTe,classes){
+  const nc=classes?classes.length:2,cm=confMatrix(yTe,yPTe,nc),mx=Math.max(...cm.flat())||1;
+  let html=`<div style="overflow-x:auto"><div style="display:grid;grid-template-columns:auto ${Array(nc).fill('56px').join(' ')};gap:4px;align-items:center;font-size:13px"><div></div>${(classes||['0','1']).slice(0,nc).map(c=>`<div style="text-align:center;font-size:11px;color:var(--text2)">${c}</div>`).join('')}`;
+  cm.forEach((row,i)=>{html+=`<div style="font-size:11px;color:var(--text2);text-align:right;padding-right:6px">${(classes||['0','1'])[i]||i}</div>`;row.forEach((v,j)=>{const al=v/mx;const bg=i===j?`rgba(37,99,235,${0.1+al*0.7})`:`rgba(220,38,38,${al*0.55})`;html+=`<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:${bg};font-weight:700">${v}</div>`;});});
+  html+=`</div><div style="font-size:11px;color:var(--text2);margin-top:6px">縦: 実際 / 横: 予測　対角線 = 正解</div></div>`;
+  document.getElementById('cmDisplay').innerHTML=html;
+}
+
+function showROC(yTe,probaTest){
+  const{auc,pts}=rocAUC(yTe,probaTest);destroyC('rocChart');
+  charts.roc=new Chart(document.getElementById('rocChart'),{type:'line',data:{datasets:[{label:`ROC (AUC=${auc.toFixed(3)})`,data:pts.map(p=>({x:p[0],y:p[1]})),borderColor:'#2563eb',borderWidth:2,fill:false,pointRadius:0,tension:0},{label:'ランダム',data:[{x:0,y:0},{x:1,y:1}],borderColor:'#9b9890',borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'FPR'},min:0,max:1},y:{title:{display:true,text:'TPR'},min:0,max:1}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+}
+
+function showScatter(yTe,yPTe){
+  destroyC('scatterChart');const mn=Math.min(...yTe,...yPTe),mx=Math.max(...yTe,...yPTe);
+  charts.scatter=new Chart(document.getElementById('scatterChart'),{type:'scatter',data:{datasets:[{label:'予測 vs 実測',data:yTe.map((v,i)=>({x:v,y:yPTe[i]})),backgroundColor:'rgba(37,99,235,0.4)',pointRadius:4},{label:'理想線',data:[{x:mn,y:mn},{x:mx,y:mx}],type:'line',borderColor:'#dc2626',borderWidth:1.5,pointRadius:0,borderDash:[5,5]}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'実測値'}},y:{title:{display:true,text:'予測値'}}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+}
+
+function showFI(fi,featNames){
+  const sorted=[...fi.map((v,i)=>({v,n:featNames[i]||'feat'+i}))].sort((a,b)=>b.v-a.v).slice(0,15);
+  const mx=sorted[0]?.v||1;
+  document.getElementById('fiDisplay').innerHTML=`<table class="result"><thead><tr><th>特徴量</th><th>重要度</th><th style="width:40%"></th></tr></thead><tbody>${sorted.map(({v,n})=>`<tr><td>${n}</td><td style="font-weight:600">${(v*100).toFixed(1)}%</td><td><div class="feat-bar-wrap"><div class="feat-bar" style="width:${(v/mx*100).toFixed(1)}%"></div></div></td></tr>`).join('')}</tbody></table>`;
+}
+
+function showLC(lc,regression){
+  destroyC('lcChart');const label=regression?'R²':'正解率';
+  charts.lc=new Chart(document.getElementById('lcChart'),{type:'line',data:{labels:lc.map(p=>p.sz+'件'),datasets:[{label:'訓練スコア',data:lc.map(p=>parseFloat(p.train.toFixed(3))),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.07)',fill:true,tension:0.3,pointRadius:4},{label:'テストスコア',data:lc.map(p=>parseFloat(p.test.toFixed(3))),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,0.07)',fill:true,tension:0.3,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'訓練サンプル数'}},y:{title:{display:true,text:label},min:regression?undefined:0,max:regression?undefined:1}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+}
+
+function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+</script>
+</body>
+</html>

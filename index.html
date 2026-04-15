@@ -968,7 +968,14 @@ async function runAnalysis(){
   let fi=null,fiSorted=[];
   if(method==='rf')fi=fiRF(model);
   else if(method==='gbdt')fi=fiGBDT(model);
-  if(fi){const fiLen=fi.length;const safeFN=featNames.slice(0,fiLen);while(safeFN.length<fiLen)safeFN.push('特徴量'+(safeFN.length+1));fiSorted=[...fi.map((v,i)=>({val:v,name:safeFN[i]}))].sort((a,b)=>b.val-a.val);}
+  if(fi){
+    const fiLen=fi.length;
+    // featNamesを完全に独立したコピーとして作成
+    const safeFN=featNames.map(n=>String(n));
+    while(safeFN.length<fiLen)safeFN.push('特徴量'+(safeFN.length+1));
+    // fiSortedも完全独立コピー
+    fiSorted=fi.map((v,i)=>({val:Number(v),name:String(safeFN[i]||'特徴量'+(i+1))})).sort((a,b)=>b.val-a.val);
+  }
 
   setP(85);await sl(10);
   const lc=learningCurve(XTrM,yTrain,XTeM,yTest,method,regression,7);
@@ -1015,7 +1022,14 @@ async function runAnalysis(){
     showScatter(yTest,yPTe);
   }
   const fiCard=document.getElementById('fiCard');
-  fiCard.style.display='none';fiCard.style.display='';if(fi&&fiSorted.length){fiCard.style.removeProperty('display');fiCard.style.display='block';setTimeout(()=>showFISorted(fiSorted),0);}else{fiCard.style.display='none';}
+  if(fi&&fiSorted.length){
+    fiCard.style.display='block';
+    // スナップショットとして完全コピーを渡す
+    const snapshot=JSON.parse(JSON.stringify(fiSorted));
+    setTimeout(()=>showFISorted(snapshot),0);
+  }else{
+    fiCard.style.display='none';
+  }
   showLC(lc,regression);
   setP(100);
 

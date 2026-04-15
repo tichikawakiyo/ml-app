@@ -965,21 +965,20 @@ async function runAnalysis(){
   let cvResult=null;
   if(kFold>0){cvResult=kfoldCV(X,y,kFold,method,regression);setP(80);await sl(10);}
 
+  setP(85);await sl(10);
+  const lc=learningCurve(XTrM,yTrain,XTeM,yTest,method,regression,7);
+  setP(95);await sl(10);
+
+  // fi計算はlearningCurve完了後・awaitなしで実行
   let fi=null,fiSorted=[];
   if(method==='rf')fi=fiRF(model);
   else if(method==='gbdt')fi=fiGBDT(model);
   if(fi){
     const fiLen=fi.length;
-    // featNamesを完全に独立したコピーとして作成
     const safeFN=featNames.map(n=>String(n));
     while(safeFN.length<fiLen)safeFN.push('特徴量'+(safeFN.length+1));
-    // fiSortedも完全独立コピー
     fiSorted=fi.map((v,i)=>({val:Number(v),name:String(safeFN[i]||'特徴量'+(i+1))})).sort((a,b)=>b.val-a.val);
   }
-
-  setP(85);await sl(10);
-  const lc=learningCurve(XTrM,yTrain,XTeM,yTest,method,regression,7);
-  setP(95);await sl(10);
 
   // Build metrics object
   const nc=classes?classes.length:2;
@@ -999,7 +998,7 @@ async function runAnalysis(){
     trainAcc:!regression?trainScore:null,
     trainR2:regression?trainScore:null,
     overfitLevel,
-    featureImportance:fiSorted
+    featureImportance:fiSorted.map(x=>({val:x.val,name:x.name}))
   };
 
   trainedModel={model,features,target,catMaps,numCols,catCols,featNames,regression,classes,method,normMeans,normStds,dateCol:document.getElementById('dateSel').value};
@@ -1024,9 +1023,7 @@ async function runAnalysis(){
   const fiCard=document.getElementById('fiCard');
   if(fi&&fiSorted.length){
     fiCard.style.display='block';
-    // スナップショットとして完全コピーを渡す
-    const snapshot=JSON.parse(JSON.stringify(fiSorted));
-    setTimeout(()=>showFISorted(snapshot),0);
+    showFISorted(fiSorted.map(x=>({val:x.val,name:x.name})));
   }else{
     fiCard.style.display='none';
   }

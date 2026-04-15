@@ -965,7 +965,7 @@ async function runAnalysis(){
   let fi=null,fiSorted=[];
   if(method==='rf')fi=fiRF(model);
   else if(method==='gbdt')fi=fiGBDT(model);
-  if(fi)fiSorted=[...fi.map((v,i)=>({val:v,name:featNames[i]||'feat'+i}))].sort((a,b)=>b.val-a.val);
+  if(fi){const fiLen=fi.length;const safeFN=featNames.slice(0,fiLen);while(safeFN.length<fiLen)safeFN.push('特徴量'+(safeFN.length+1));fiSorted=[...fi.map((v,i)=>({val:v,name:safeFN[i]}))].sort((a,b)=>b.val-a.val);}
 
   setP(85);await sl(10);
   const lc=learningCurve(XTrM,yTrain,XTeM,yTest,method,regression,7);
@@ -1012,7 +1012,7 @@ async function runAnalysis(){
     showScatter(yTest,yPTe);
   }
   const fiCard=document.getElementById('fiCard');
-  if(fi){fiCard.style.display='block';showFI(fi,featNames);}else{fiCard.style.display='none';}
+  if(fi&&fiSorted.length){fiCard.style.display='block';showFISorted(fiSorted);}else{fiCard.style.display='none';}
   showLC(lc,regression);
   setP(100);
 
@@ -1115,11 +1115,15 @@ function showScatter(yTe,yPTe){
   charts.scatter=new Chart(document.getElementById('scatterChart'),{type:'scatter',data:{datasets:[{label:'予測 vs 実測',data:yTe.map((v,i)=>({x:v,y:yPTe[i]})),backgroundColor:'rgba(37,99,235,0.4)',pointRadius:4},{label:'理想線',data:[{x:mn,y:mn},{x:mx,y:mx}],type:'line',borderColor:'#dc2626',borderWidth:1.5,pointRadius:0,borderDash:[5,5]}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'実測値'}},y:{title:{display:true,text:'予測値'}}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
 }
 
-function showFI(fi,featNames){
-  const sorted=[...fi.map((v,i)=>({v,n:featNames[i]||'feat'+i}))].sort((a,b)=>b.v-a.v).slice(0,15);
-  const mx=sorted[0]?.v||1;
-  document.getElementById('fiDisplay').innerHTML=`<table class="result"><thead><tr><th>特徴量</th><th>重要度</th><th style="width:40%"></th></tr></thead><tbody>${sorted.map(({v,n})=>`<tr><td>${n}</td><td style="font-weight:600">${(v*100).toFixed(1)}%</td><td><div class="feat-bar-wrap"><div class="feat-bar" style="width:${(v/mx*100).toFixed(1)}%"></div></div></td></tr>`).join('')}</tbody></table>`;
+function showFISorted(sorted){
+  const mx=sorted[0]?.val||1;
+  document.getElementById("fiDisplay").innerHTML=`<table class="result"><thead><tr><th>特徴量</th><th>重要度</th><th style="width:40%"></th></tr></thead><tbody>${sorted.slice(0,15).map(({val:v,name:n})=>`<tr><td>${n}</td><td style="font-weight:600">${(v*100).toFixed(1)}%</td><td><div class="feat-bar-wrap"><div class="feat-bar" style="width:${(v/mx*100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>`;
 }
+
+
+
+
+
 
 function showLC(lc,regression){
   destroyC('lcChart');const label=regression?'R²':'正解率';

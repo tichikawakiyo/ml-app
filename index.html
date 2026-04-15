@@ -1011,7 +1011,8 @@ async function runAnalysis(){
     document.getElementById('regResults').style.display='block';
     showScatter(yTest,yPTe);
   }
-  if(fi)showFI(fi,featNames);else document.getElementById('fiCard').style.display='none';
+  const fiCard=document.getElementById('fiCard');
+  if(fi){fiCard.style.display='block';showFI(fi,featNames);}else{fiCard.style.display='none';}
   showLC(lc,regression);
   setP(100);
 

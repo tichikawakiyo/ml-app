@@ -658,10 +658,10 @@ function mode_(y){const c={};y.forEach(v=>c[v]=(c[v]||0)+1);return parseInt(Obje
 function buildTree(X,y,depth,maxD,minS,nF,reg){
   const n=X.length,imp=reg?mse:gini,lv=reg?mean(y):mode_(y);
   if(depth>=maxD||n<minS||imp(y)<1e-7)return{leaf:true,val:lv,n};
-  const nFeat=X[0].length;let fi=[...Array(nFeat).keys()];
-  if(nF<nFeat){for(let i=nFeat-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fi[i],fi[j]]=[fi[j],fi[i]];}fi=fi.slice(0,nF);}
+  const nFeat=X[0].length;let featIdx=[...Array(nFeat).keys()];
+  if(nF<nFeat){for(let i=nFeat-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[featIdx[i],featIdx[j]]=[featIdx[j],featIdx[i]];}featIdx=featIdx.slice(0,nF);}
   let bG=-Infinity,bF=-1,bT=0;const pI=imp(y);
-  for(const f of fi){
+  for(const f of featIdx){
     const vs=[...new Set(X.map(r=>r[f]))].sort((a,b)=>a-b);
     for(let vi=0;vi<vs.length-1;vi++){
       const t=(vs[vi]+vs[vi+1])/2,lm=X.map(r=>r[f]<=t);
@@ -678,7 +678,7 @@ function buildTree(X,y,depth,maxD,minS,nF,reg){
     right:buildTree(X.filter((_,i)=>!lm[i]),y.filter((_,i)=>!lm[i]),depth+1,maxD,minS,nF,reg)};
 }
 function pTree(t,x){return t.leaf?t.val:x[t.feat]<=t.thresh?pTree(t.left,x):pTree(t.right,x);}
-function fiTree(t,n){const imp=Array(n).fill(0);function walk(nd){if(nd.leaf)return;if(nd.feat>=0&&nd.feat<n)imp[nd.feat]+=(nd.gain||0)*nd.n;walk(nd.left);walk(nd.right);}walk(t);return imp;}
+function fiTree(t,nFeat){const impArr=Array(nFeat).fill(0);function walk(nd){if(nd.leaf)return;if(nd.feat>=0&&nd.feat<nFeat)impArr[nd.feat]+=(nd.gain||0)*nd.n;walk(nd.left);walk(nd.right);}walk(t);return impArr;}
 
 function trainRF(X,y,nT=50,maxD=8,reg=false){
   const n=X.length,sq=Math.max(1,Math.round(Math.sqrt(X[0].length)));
@@ -687,7 +687,7 @@ function trainRF(X,y,nT=50,maxD=8,reg=false){
 }
 function predRF(m,X){return X.map(x=>{const p=m.trees.map(t=>pTree(t,x));if(m.regression)return mean(p);const c={};p.forEach(v=>c[v]=(c[v]||0)+1);return parseInt(Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]);});}
 function predRFProba(m,X,nc){return X.map(x=>{const p=m.trees.map(t=>pTree(t,x));const pr=Array(nc).fill(0);p.forEach(v=>pr[v]=(pr[v]||0)+1);return pr.map(c=>c/p.length);});}
-function fiRF(m){const imp=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>imp[i]+=v);});const s=imp.reduce((a,b)=>a+b,0)||1;return imp.map(v=>v/s);}
+function fiRF(m){const impArr=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>impArr[i]+=v);});const s=impArr.reduce((a,b)=>a+b,0)||1;return impArr.map(v=>v/s);}
 
 function sig(z){return 1/(1+Math.exp(-Math.max(-500,Math.min(500,z))));}
 function trainGBDT(X,y,nT=50,lr=0.1,maxD=4,reg=false){
@@ -703,7 +703,7 @@ function trainGBDT(X,y,nT=50,lr=0.1,maxD=4,reg=false){
 }
 function predGBDT(m,X){return X.map(x=>{let p=m.init;m.trees.forEach(t=>p+=m.lr*pTree(t,x));return m.regression?p:sig(p)>=0.5?1:0;});}
 function predGBDTProba(m,X){return X.map(x=>{let p=m.init;m.trees.forEach(t=>p+=m.lr*pTree(t,x));const p1=sig(p);return[1-p1,p1];});}
-function fiGBDT(m){const imp=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>imp[i]+=v);});const s=imp.reduce((a,b)=>a+b,0)||1;return imp.map(v=>v/s);}
+function fiGBDT(m){const impArr=Array(m.nFeat).fill(0);m.trees.forEach(t=>{fiTree(t,m.nFeat).forEach((v,i)=>impArr[i]+=v);});const s=impArr.reduce((a,b)=>a+b,0)||1;return impArr.map(v=>v/s);}
 
 function trainLR(X,y,lr=0.1,ep=200){
   const n=X.length,m=X[0].length;let w=Array(m).fill(0),b=0;
@@ -970,14 +970,14 @@ async function runAnalysis(){
   setP(95);await sl(10);
 
   // fi計算はlearningCurve完了後・awaitなしで実行
-  let fi=null,fiSorted=[];
-  if(method==='rf')fi=fiRF(model);
-  else if(method==='gbdt')fi=fiGBDT(model);
-  if(fi){
-    const fiLen=fi.length;
+  let fiImportance=null,fiSorted=[];
+  if(method==="rf")fiImportance=fiRF(model);
+  else if(method==="gbdt")fiImportance=fiGBDT(model);
+  if(fiImportance){
+    const fiLen=fiImportance.length;
     const safeFN=featNames.map(n=>String(n));
     while(safeFN.length<fiLen)safeFN.push('特徴量'+(safeFN.length+1));
-    fiSorted=fi.map((v,i)=>({val:Number(v),name:String(safeFN[i]||'特徴量'+(i+1))})).sort((a,b)=>b.val-a.val);
+    fiSorted=fiImportance.map((v,i)=>({val:Number(v),name:String(safeFN[i]||'特徴量'+(i+1))})).sort((a,b)=>b.val-a.val);
   }
 
   // Build metrics object
@@ -1021,7 +1021,7 @@ async function runAnalysis(){
     showScatter(yTest,yPTe);
   }
   const fiCard=document.getElementById('fiCard');
-  if(fi&&fiSorted.length){
+  if(fiImportance&&fiSorted.length){
     fiCard.style.display='block';
     showFISorted(fiSorted.map(x=>({val:x.val,name:x.name})));
   }else{
